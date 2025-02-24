@@ -4,55 +4,71 @@ import numpy as np
 import cv2
 from PIL import Image
 import time
+import gdown
+import os
+
+file_id = "1_KQjJRcp_CivsUhdoOWASQlYL25QzZA2"
+url = 'https://drive.google.com/file/d/1_KQjJRcp_CivsUhdoOWASQlYL25QzZA2/view?usp=sharing'
+model_path = "trained_plant_disease_model.keras"
+
+if not os.path.exists(model_path):
+    st.warning("Downloading model from Google Drive...")
+    gdown.download(url, model_path,quiet=False)
+    
 
 # Load the trained model
 @st.cache_resource()
-def load_model():
-    model = tf.keras.models.load_model("trained_plant_disease_model.keras")  # Ensure the correct path
-    return model
+def load_model(): 
+    return tf.keras.models.load_model(model_path)
 
 model = load_model()
 
 # Class labels based on training
 CLASS_NAMES = ['Healthy', 'Early Blight', 'Late Blight']
 
-# Define Prediction Function (Moved it Up)
+# Define Prediction Function
 def predict(image):
-    img_array = np.array(image)
+    try:
+        # Convert image to RGB (handle cases where it has an alpha channel)
+        image = image.convert("RGB")
 
-    # Ensure 3 channels
-    if img_array.shape[-1] == 4:  # If image has an alpha channel
-        img_array = img_array[:, :, :3]
+        # Convert image to NumPy array
+        img_array = np.array(image)
 
-    img_resized = cv2.resize(img_array, (128, 128))  # Resize to match model input
-    img_resized = img_resized / 255.0  # Normalize
-    img_expanded = np.expand_dims(img_resized, axis=0)  # Expand dimensions for model
+        # Resize image to model input size (128x128)
+        img_resized = cv2.resize(img_array, (128, 128))
 
-    predictions = model.predict(img_expanded)
-    predicted_class = CLASS_NAMES[np.argmax(predictions)]
-    confidence = np.max(predictions) * 100
+        # Expand dimensions to match model input shape
+        img_expanded = np.expand_dims(img_resized, axis=0)
 
-    return f"{predicted_class} ({confidence:.2f}% Confidence)", confidence
+        # Debugging: Show image shape before prediction
+        st.write(f"🖼 Image shape before prediction: {img_expanded.shape}")
 
-# Sidebar Info
-st.sidebar.title("ℹ About the Model")
-st.sidebar.write("""
-- Trained using CNN 🧠
-- Image Size: 128x128 px
-- 3 Classes: Healthy, Early Blight, Late Blight 🍃
-""")
-st.sidebar.write("💡 Upload a potato leaf image to detect its disease status.")
+        # Predict using model
+        predictions = model.predict(img_expanded)
 
-# Main UI
-st.title("🥔 Potato Leaf Disease Detector")
-st.write("Upload an image of a potato leaf to check for diseases using AI.")
+        # Get the highest probability class
+        predicted_class_index = np.argmax(predictions)
+        predicted_class = CLASS_NAMES[predicted_class_index]
+        confidence = predictions[0][predicted_class_index] * 100
+
+        # Debugging Outputs
+        st.write("🔍 Model Raw Output (Softmax Probabilities):", predictions)
+        st.write(f"📌 Predicted Class: {predicted_class}")
+        st.write(f"🎯 Confidence Score: {confidence:.2f}%")
+
+        return f"{predicted_class} ({confidence:.2f}% Confidence)", confidence
+
+    except Exception as e:
+        st.error(f"Error in prediction: {e}")
+        return "Error", 0
 
 # Upload Image
-uploaded_file = st.file_uploader("📤 Choose an image...", type=["jpg", "png", "jpeg"])
+uploaded_file = st.file_uploader("📤 Upload an image", type=["jpg", "png", "jpeg"])
 
 # Camera Option
-st.write("📷 Or take a live photo:")
-camera_img = st.camera_input("Capture Image")
+st.write("📸 Or capture a live image:")
+camera_img = st.camera_input("Take a Photo")
 
 # Select image source
 image_source = None
@@ -69,14 +85,6 @@ if image_source is not None:
         with st.spinner("Analyzing the image... ⏳"):
             time.sleep(2)  # Simulate processing time
             result, confidence = predict(image_source)
+
+            # Display Prediction
             st.success(f"✅ Prediction: {result}")
-            
-            # Confidence Progress Bar
-            st.progress(int(confidence))
-
-if __name__ == "main":
-    st.markdown("<style>div.stButton > button {width: 100%;}</style>", unsafe_allow_html=True)
-
-file_id= "1_KQjJRcp_CivsUhdoOWASQlYL25QzZA2"
-url = 'https://drive.google.com/file/d/1_KQjJRcp_CivsUhdoOWASQlYL25QzZA2/view?usp=sharing'
-model_path="trained_plant_disease_model.keras"
