@@ -7,8 +7,9 @@ import time
 import gdown
 import os
 
-file_id = "1_KQjJRcp_CivsUhdoOWASQlYL25QzZA2"
-url = 'https://drive.google.com/file/d/1_KQjJRcp_CivsUhdoOWASQlYL25QzZA2/view?usp=sharing'
+
+file_id = "1_9Q28QeJXnyRCH18IVxpX5KhuDtZC40c"
+url = 'https://drive.google.com/uc?id=1_9Q28QeJXnyRCH18IVxpX5KhuDtZC40c'
 model_path = "trained_plant_disease_model.keras"
 
 if not os.path.exists(model_path):
